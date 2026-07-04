@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>黄金走势分析台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <section class="auth-gate" id="authGate">
+      <form class="auth-card" id="authForm">
+        <p class="eyebrow">软件授权</p>
+        <h1>激活黄金走势工作台</h1>
+        <p class="auth-copy">请输入授权中心签发的许可证密钥。授权会绑定当前设备，并由中央授权服务续签验证。</p>
+        <label>
+          <span>许可证密钥</span>
+          <input id="authCode" name="code" type="password" autocomplete="off" placeholder="请输入许可证密钥" required />
+        </label>
+        <div class="license-device" id="authDevice"></div>
+        <button class="primary-action" type="submit">联网激活</button>
+        <small id="authMessage"></small>
+      </form>
+    </section>
+
+    <div class="app-shell" id="appShell" hidden>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">黄金走势分析台</p>
+          <h1 id="pageTitle">先看结论，再看原因</h1>
+        </div>
+        <div class="topbar-actions">
+          <nav class="view-switch" aria-label="页面切换">
+            <button class="view-tab active" type="button" data-view="dashboard">走势</button>
+            <button class="view-tab" type="button" data-view="review">复盘</button>
+            <button class="view-tab" type="button" data-view="settings">设置</button>
+            <button class="view-tab" type="button" data-view="risk">风险</button>
+          </nav>
+          <button class="primary-action" id="syncBtn">同步行情</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="view-panel active" id="dashboardView">
+          <div class="mode-dashboard simple-dashboard">
+            <section class="hero-panel">
+              <div class="hero-copy">
+                <div class="status-row">
+                  <span class="status-dot"></span>
+                  <span id="syncStatus">使用本地示例数据</span>
+                </div>
+                <p class="hero-label">综合判断</p>
+                <div class="main-call">
+                  <span id="mainDirection">等待同步</span>
+                  <strong id="mainScore">--</strong>
+                </div>
+                <p class="hero-summary" id="heroSummary">
+                  点击同步行情后，会在首页直接给出未来 1 天、1 周、1 月、3 个月、半年、1 年的涨跌判断。
+                </p>
+              </div>
+
+              <div class="quote-panel">
+                <span>当前人民币金价</span>
+                <strong id="goldCny">--</strong>
+                <small id="goldChange">等待同步</small>
+                <div class="quote-row">
+                  <div>
+                    <span>国际金价</span>
+                    <b id="goldUsd">--</b>
+                  </div>
+                  <div>
+                    <span>美元/人民币</span>
+                    <b id="usdCny">--</b>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="risk-banner" aria-label="风险提示">
+              <div>
+                <strong>仅供研究参考，不构成投资建议</strong>
+                <p>首页的涨跌判断是基于历史行情、宏观校准和模型规则生成的辅助观察，不能替代你的独立判断或专业意见。</p>
+              </div>
+              <div class="risk-banner-actions">
+                <span class="muted-pill" id="riskInlineStatus">未确认</span>
+                <button class="secondary-action" type="button" data-view-link="risk">查看完整声明</button>
+              </div>
+            </section>
+
+            <section class="forecast-grid" id="forecastGrid" aria-label="不同时间维度走势预测"></section>
+
+            <section class="content-grid">
+              <article class="panel chart-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">价格趋势</p>
+                    <h2>近一年黄金走势</h2>
+                  </div>
+                  <span id="updatedAt" class="muted-pill">未同步</span>
+                </div>
+                <canvas id="priceChart" width="900" height="320" aria-label="黄金价格趋势图"></canvas>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">判断依据</p>
+                    <h2>为什么这样判断</h2>
+                  </div>
+                </div>
+                <div class="reason-list" id="reasonList"></div>
+              </article>
+            </section>
+
+            <section class="content-grid lower-grid">
+              <article class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">市场温度</p>
+                    <h2>关键指标</h2>
+                  </div>
+                </div>
+                <div class="metric-grid">
+                  <div class="metric">
+                    <span>短线动能</span>
+                    <strong id="momentumMetric">--</strong>
+                  </div>
+                  <div class="metric">
+                    <span>趋势强度</span>
+                    <strong id="trendMetric">--</strong>
+                  </div>
+                  <div class="metric">
+                    <span>波动风险</span>
+                    <strong id="volatilityMetric">--</strong>
+                  </div>
+                  <div class="metric">
+                    <span>数据来源</span>
+                    <strong id="sourceLabel">本地数据</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel control-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">人工校准</p>
+                    <h2>把你看到的宏观环境加进去</h2>
+                  </div>
+                </div>
+                <form id="macroForm">
+                  <label class="slider-row">
+                    <span>美元强弱</span>
+                    <input id="dollarScore" name="dollarScore" type="range" min="-2" max="2" step="1" />
+                    <b id="dollarScoreLabel"></b>
+                  </label>
+                  <label class="slider-row">
+                    <span>实际利率</span>
+                    <input id="rateScore" name="rateScore" type="range" min="-2" max="2" step="1" />
+                    <b id="rateScoreLabel"></b>
+                  </label>
+                  <label class="slider-row">
+                    <span>避险情绪</span>
+                    <input id="riskScore" name="riskScore" type="range" min="-2" max="2" step="1" />
+                    <b id="riskScoreLabel"></b>
+                  </label>
+                  <label class="slider-row">
+                    <span>通胀/央行购金</span>
+                    <input id="inflationScore" name="inflationScore" type="range" min="-2" max="2" step="1" />
+                    <b id="inflationScoreLabel"></b>
+                  </label>
+                </form>
+              </article>
+            </section>
+          </div>
+
+          <div class="mode-dashboard professional-dashboard">
+            <section class="pro-hero panel">
+              <div>
+                <div class="status-row">
+                  <span class="status-dot"></span>
+                  <span id="proSyncStatus">使用本地示例数据</span>
+                </div>
+                <p class="hero-label">专业研究模式</p>
+                <div class="main-call pro-main-call">
+                  <span id="proMainDirection">等待同步</span>
+                  <strong id="proMainScore">--</strong>
+                </div>
+                <p class="hero-summary" id="proSummary">
+                  专业模式会同时观察黄金价格、美元、利率、ETF、金矿股、波动率和新闻线索。
+                </p>
+              </div>
+              <div class="pro-snapshot">
+                <div>
+                  <span>人民币金价</span>
+                  <strong id="proGoldCny">--</strong>
+                </div>
+                <div>
+                  <span>美元指数</span>
+                  <strong id="proDxy">--</strong>
+                </div>
+                <div>
+                  <span>10年期收益率</span>
+                  <strong id="proYield">--</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="risk-banner pro-risk-banner" aria-label="专业模式风险提示">
+              <div>
+                <strong>专业模式不代表更确定的结论</strong>
+                <p>美元、利率、ETF、矿业股、VIX 和新闻线索只是辅助因子，可能互相矛盾，也可能被突发事件快速推翻。</p>
+              </div>
+              <div class="risk-banner-actions">
+                <span class="muted-pill" id="proRiskInlineStatus">未确认</span>
+                <button class="secondary-action" type="button" data-view-link="risk">查看风险边界</button>
+              </div>
+            </section>
+
+            <section class="pro-forecast-grid" id="proForecastGrid" aria-label="专业模式走势预测"></section>
+
+            <section class="pro-layout">
+              <article class="panel pro-factor-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">驱动因子矩阵</p>
+                    <h2>黄金走势的专业变量</h2>
+                  </div>
+                  <span id="proDataTime" class="muted-pill">未同步</span>
+                </div>
+                <div class="factor-grid" id="proFactorGrid"></div>
+              </article>
+
+              <article class="panel pro-news-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">专业新闻</p>
+                    <h2>黄金相关市场线索</h2>
+                  </div>
+                </div>
+                <div class="news-list" id="proNewsList"></div>
+                <div class="news-mood-strip" aria-label="新闻情绪概览">
+                  <div>
+                    <span>新闻情绪</span>
+                    <strong id="proMoodSignal">等待同步</strong>
+                  </div>
+                  <div>
+                    <span>利多</span>
+                    <strong id="proMoodBullish">0</strong>
+                  </div>
+                  <div>
+                    <span>利空</span>
+                    <strong id="proMoodBearish">0</strong>
+                  </div>
+                  <div>
+                    <span>中性</span>
+                    <strong id="proMoodNeutral">0</strong>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="pro-layout lower-pro-layout">
+              <article class="panel chart-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">技术结构</p>
+                    <h2>均线、波动与趋势</h2>
+                  </div>
+                  <span id="proTechnicalBadge" class="muted-pill">等待计算</span>
+                </div>
+                <canvas id="proPriceChart" width="900" height="320" aria-label="专业黄金技术图"></canvas>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">联动资产</p>
+                    <h2>黄金相关风险资产</h2>
+                  </div>
+                </div>
+                <div class="linked-list" id="proLinkedAssets"></div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="section-label">研究员清单</p>
+                    <h2>下一步重点核验</h2>
+                  </div>
+                </div>
+                <div class="research-list" id="proResearchList"></div>
+              </article>
+            </section>
+          </div>
+        </section>
+
+        <section class="view-panel review-view" id="reviewView">
+          <section class="review-hero panel">
+            <div>
+              <p class="section-label">预测复盘</p>
+              <h2>把每天的判断留下来，后面用真实价格核验</h2>
+              <p>这个页面会把首页当前预测记录成复盘样本，并在行情同步后检查 1 天、1 周结果；同时可以设置关键金价提醒和高波动事件。</p>
+            </div>
+            <div class="review-hero-actions">
+              <button class="primary-action" id="captureForecastBtn" type="button">记录今日判断</button>
+              <button class="secondary-action" id="evaluateForecastBtn" type="button">核验已到期</button>
+            </div>
+          </section>
+
+          <section class="review-stat-grid" aria-label="复盘统计">
+            <article class="panel review-stat-card">
+              <span>记录次数</span>
+              <strong id="reviewTotalCount">0</strong>
+              <p>已保存的预测快照</p>
+            </article>
+            <article class="panel review-stat-card">
+              <span>1天命中率</span>
+              <strong id="reviewD1HitRate">--</strong>
+              <p id="reviewD1Meta">等待样本到期</p>
+            </article>
+            <article class="panel review-stat-card">
+              <span>1周命中率</span>
+              <strong id="reviewW1HitRate">--</strong>
+              <p id="reviewW1Meta">等待样本到期</p>
+            </article>
+            <article class="panel review-stat-card">
+              <span>价格提醒</span>
+              <strong id="activeAlertCount">0</strong>
+              <p>尚未触发的提醒</p>
+            </article>
+          </section>
+
+          <section class="review-layout">
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">预测记录</p>
+                  <h2>最近判断</h2>
+                </div>
+                <span class="muted-pill" id="reviewLastCapture">尚未记录</span>
+              </div>
+              <div class="review-list" id="forecastReviewList"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">价格提醒</p>
+                  <h2>关键金价</h2>
+                </div>
+              </div>
+              <form class="tool-form" id="alertForm">
+                <label>
+                  <span>提醒条件</span>
+                  <select id="alertOperator" name="operator">
+                    <option value="above">金价高于或等于</option>
+                    <option value="below">金价低于或等于</option>
+                  </select>
+                </label>
+                <label>
+                  <span>人民币金价 元/克</span>
+                  <input id="alertTarget" name="target" type="number" min="1" step="0.01" placeholder="例如 760" required />
+                </label>
+                <label>
+                  <span>备注</span>
+                  <input id="alertNote" name="note" type="text" maxlength="28" placeholder="例如 突破压力位" />
+                </label>
+                <button class="primary-action" type="submit">添加提醒</button>
+              </form>
+              <div class="review-list compact" id="priceAlertList"></div>
+            </article>
+          </section>
+
+          <section class="review-layout lower-review-layout">
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">事件日历</p>
+                  <h2>高波动日期</h2>
+                </div>
+              </div>
+              <form class="tool-form event-form" id="eventForm">
+                <label>
+                  <span>日期</span>
+                  <input id="eventDate" name="date" type="date" required />
+                </label>
+                <label>
+                  <span>事件类型</span>
+                  <select id="eventType" name="type">
+                    <option value="CPI">CPI</option>
+                    <option value="非农">非农</option>
+                    <option value="美联储">美联储</option>
+                    <option value="央行购金">央行购金</option>
+                    <option value="其他">其他</option>
+                  </select>
+                </label>
+                <label>
+                  <span>标题</span>
+                  <input id="eventTitle" name="title" type="text" maxlength="32" placeholder="例如 美国 CPI 公布" required />
+                </label>
+                <label>
+                  <span>影响方向</span>
+                  <select id="eventImpact" name="impact">
+                    <option value="watch">观察</option>
+                    <option value="bullish">偏利多</option>
+                    <option value="bearish">偏利空</option>
+                  </select>
+                </label>
+                <button class="primary-action" type="submit">添加事件</button>
+              </form>
+              <div class="review-list" id="eventList"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">新闻情绪</p>
+                  <h2>专业新闻的方向标记</h2>
+                </div>
+                <span class="muted-pill" id="reviewMoodSignal">等待同步</span>
+              </div>
+              <div class="mood-breakdown">
+                <div class="mood-bullish">
+                  <span>利多</span>
+                  <strong id="reviewMoodBullish">0</strong>
+                </div>
+                <div class="mood-bearish">
+                  <span>利空</span>
+                  <strong id="reviewMoodBearish">0</strong>
+                </div>
+                <div>
+                  <span>中性</span>
+                  <strong id="reviewMoodNeutral">0</strong>
+                </div>
+              </div>
+              <p class="settings-copy">新闻情绪来自标题和摘要的关键词识别，用于辅助阅读，不代表确定影响。</p>
+            </article>
+          </section>
+        </section>
+
+        <section class="view-panel" id="settingsView">
+          <section class="settings-hero panel">
+            <div>
+              <p class="section-label">设置中心</p>
+              <h2>授权、模式、颜色都在这里调整</h2>
+            </div>
+            <span class="muted-pill" id="authStatus">已授权</span>
+          </section>
+
+          <section class="settings-grid">
+            <article class="panel settings-card">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">软件授权</p>
+                  <h2>授权状态</h2>
+                </div>
+              </div>
+              <p class="settings-copy" id="licenseSettingsCopy">正在读取中央授权状态。</p>
+              <div class="license-detail" id="licenseDetail"></div>
+              <button class="secondary-action" id="refreshLicenseBtn" type="button">在线验证</button>
+            </article>
+
+            <article class="panel settings-card update-settings-card">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">云端更新</p>
+                  <h2>版本检查</h2>
+                </div>
+                <button class="secondary-action small" id="checkUpdateBtn" type="button">检查更新</button>
+              </div>
+              <p class="settings-copy" id="updateStatusCopy">正在读取云端更新状态。</p>
+              <div class="update-grid">
+                <div class="update-card">
+                  <span>当前版本</span>
+                  <strong id="currentVersion">--</strong>
+                  <label>
+                    <small>升级通道</small>
+                    <select id="updateChannel">
+                      <option value="stable">stable</option>
+                      <option value="beta">beta</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="update-card">
+                  <span>可用版本</span>
+                  <strong id="availableVersion">点击检查后显示</strong>
+                  <small id="availableVersionMeta">暂无更新信息</small>
+                </div>
+                <div class="update-card">
+                  <span>本地更新包</span>
+                  <strong id="downloadedVersion">未下载</strong>
+                  <small id="downloadedVersionMeta">下载后才可应用</small>
+                </div>
+              </div>
+              <div class="download-progress" id="updateProgress" hidden>
+                <div class="download-progress-head">
+                  <div>
+                    <b id="updateProgressTitle">下载状态</b>
+                    <span id="updateProgressMeta">--</span>
+                  </div>
+                  <strong id="updateProgressPercent">0%</strong>
+                </div>
+                <div class="download-progress-track"><i id="updateProgressBar"></i></div>
+              </div>
+              <div class="announcement-panel">
+                <div class="announcement-head">
+                  <b>运营公告</b>
+                  <span>由中央授权中心同步。</span>
+                </div>
+                <div class="announcement-list" id="announcementList">
+                  <div class="announcement-empty">暂无公告。点击“检查更新”后同步读取。</div>
+                </div>
+              </div>
+              <div class="settings-actions">
+                <button class="secondary-action" id="downloadUpdateBtn" type="button">下载并校验</button>
+                <button class="primary-action" id="applyUpdateBtn" type="button">应用已下载更新</button>
+              </div>
+            </article>
+
+            <article class="panel settings-card model-settings-card">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">预测模型</p>
+                  <h2>四驱动框架</h2>
+                </div>
+              </div>
+              <p class="settings-copy">专业模式按黄金研究常用框架拆成机会成本、风险不确定性、经济/通胀、价格动量，并用真实历史数量和数据源质量修正置信度。</p>
+              <div class="model-method-list">
+                <div><strong>机会成本</strong><span>美元、长端收益率、实际利率代理</span></div>
+                <div><strong>风险不确定性</strong><span>避险情绪、VIX、地缘和新闻情绪</span></div>
+                <div><strong>经济/通胀</strong><span>通胀预期、央行购金和长期需求代理</span></div>
+                <div><strong>价格动量</strong><span>趋势、均线、ETF/矿股共振和均值回归</span></div>
+              </div>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">工作模式</p>
+                  <h2>简易模式 / 专业模式</h2>
+                </div>
+              </div>
+              <div class="theme-options" role="group" aria-label="工作模式切换">
+                <button class="theme-option" type="button" data-theme-option="simple">
+                  <strong>简易模式</strong>
+                  <span>面向大众，重点回答未来涨跌、当前金价和简单原因。</span>
+                </button>
+                <button class="theme-option" type="button" data-theme-option="professional">
+                  <strong>专业模式</strong>
+                  <span>面向研究者，增加宏观、利率、ETF、金矿股、波动率和新闻流。</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">颜色</p>
+                  <h2>涨跌颜色</h2>
+                </div>
+                <button class="secondary-action small" id="resetColorBtn" type="button">恢复默认</button>
+              </div>
+              <div class="color-grid">
+                <label class="color-control">
+                  <span>上涨颜色</span>
+                  <input id="upColor" name="upColor" type="color" />
+                </label>
+                <label class="color-control">
+                  <span>下跌颜色</span>
+                  <input id="downColor" name="downColor" type="color" />
+                </label>
+              </div>
+              <div class="color-preview">
+                <div class="preview-card preview-up">偏涨</div>
+                <div class="preview-card preview-down">偏跌</div>
+              </div>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">风险声明</p>
+                  <h2>阅读确认</h2>
+                </div>
+                <span class="muted-pill" id="settingsRiskStatus">未确认</span>
+              </div>
+              <p class="settings-copy">建议在使用预测结论前先确认风险声明。确认记录只保存在当前浏览器，后续声明版本更新时需要重新确认。</p>
+              <div class="risk-setting-meta">
+                <span>上次确认</span>
+                <strong id="settingsRiskAcceptedAt">尚未确认</strong>
+              </div>
+              <div class="settings-actions">
+                <button class="primary-action" id="settingsRiskAcceptBtn" type="button">我已阅读并理解</button>
+                <button class="secondary-action" type="button" data-view-link="risk">查看完整声明</button>
+              </div>
+            </article>
+          </section>
+        </section>
+
+        <section class="view-panel risk-view" id="riskView">
+          <section class="risk-hero panel">
+            <div>
+              <p class="section-label">风险与声明</p>
+              <h2>这个工作台只做研究辅助，不替你做投资决定</h2>
+              <p>本页面用于说明黄金走势分析台的使用边界、数据限制、模型风险、法律风险和隐私注意事项。请在使用预测结果前阅读并确认。</p>
+            </div>
+            <div class="risk-status-card">
+              <span>当前声明版本</span>
+              <strong id="riskVersion">2026-06-16</strong>
+              <span id="riskStatus">未确认</span>
+            </div>
+          </section>
+
+          <section class="risk-summary-grid" aria-label="核心风险摘要">
+            <article class="panel risk-summary-card">
+              <span>01</span>
+              <h3>不是投资建议</h3>
+              <p>所有涨跌判断、理由、新闻分类和专业因子只用于个人研究，不构成买入、卖出、持有或资产配置建议。</p>
+            </article>
+            <article class="panel risk-summary-card">
+              <span>02</span>
+              <h3>预测可能失准</h3>
+              <p>黄金会受到政策、汇率、利率、战争、央行行为和流动性冲击影响，模型结果不能保证未来收益。</p>
+            </article>
+            <article class="panel risk-summary-card">
+              <span>03</span>
+              <h3>数据可能延迟</h3>
+              <p>价格、汇率、ETF、指数和新闻来自第三方或公开数据源，可能存在延迟、缺失、错误或同步失败。</p>
+            </article>
+            <article class="panel risk-summary-card">
+              <span>04</span>
+              <h3>交易后果自担</h3>
+              <p>任何交易、调仓、实物买卖或杠杆操作都应由用户结合自身风险承受能力独立决定并自行承担结果。</p>
+            </article>
+          </section>
+
+          <section class="panel risk-detail-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label">详细边界</p>
+                <h2>使用前需要知道的风险</h2>
+              </div>
+            </div>
+            <div class="risk-row-list">
+              <div class="risk-row">
+                <strong>模型与预测风险</strong>
+                <p>预测结果基于历史行情、趋势、波动、宏观校准和部分专业因子生成。历史规律可能失效，短期突发事件可能让结论迅速改变。</p>
+              </div>
+              <div class="risk-row">
+                <strong>金融产品风险</strong>
+                <p>黄金 ETF、黄金股、基金、期货、期权、杠杆产品和外汇相关产品的风险不同。杠杆和衍生品可能出现大幅亏损，甚至超过本金。</p>
+              </div>
+              <div class="risk-row">
+                <strong>实物黄金风险</strong>
+                <p>实物黄金价格不只等于大盘金价，还会受到品牌溢价、加工费、回收折价、检测费、渠道价差和流动性影响。</p>
+              </div>
+              <div class="risk-row">
+                <strong>数据与新闻风险</strong>
+                <p>行情、汇率、指数和新闻可能有延迟或错误。新闻情绪分类只是辅助阅读，不代表新闻真实影响已经被市场完全反映。</p>
+              </div>
+              <div class="risk-row">
+                <strong>法律与合规边界</strong>
+                <p>本工具面向个人研究场景，不提供持牌证券、期货、基金、保险、税务或法律服务。若未来公开发布、收费、推送买卖信号或管理他人资产，应先进行专业合规审查。</p>
+              </div>
+              <div class="risk-row">
+                <strong>隐私与本地数据</strong>
+                <p>当前版本主要记录设置和确认状态。若后续恢复持仓记录，成本、数量、备注和资产明细都属于敏感信息，应提供清晰的本地存储、导出和删除机制。</p>
+              </div>
+              <div class="risk-row">
+                <strong>服务可用性</strong>
+                <p>本地服务、浏览器、网络或第三方接口异常时，工作台可能无法同步或显示不完整数据，不承诺持续、实时、无误运行。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel risk-confirm-panel">
+            <div>
+              <p class="section-label">确认状态</p>
+              <h2>确认后再把预测结果作为参考</h2>
+              <p>上次确认时间：<strong id="riskAcceptedAt">尚未确认</strong></p>
+            </div>
+            <div class="risk-actions">
+              <button class="primary-action" id="riskAcceptBtn" type="button">我已阅读并理解</button>
+              <button class="secondary-action" type="button" data-view-link="dashboard">返回走势</button>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
