@@ -1,0 +1,39 @@
+# Runtime state and local secrets
+.env
+.env.*
+!.env.example
+.license-data/
+data/
+backups/
+logs/
+*.log
+
+# License/deployment material that should be provided per environment
+license-public.pem
+*.pem
+!license-public.example.pem
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+.tmp/
+tmp/
+
+# Release archives and deployment bundles
+*.zip
+*.tar.gz
+*.tgz
+release/
+releases/
+
+# Local media/marketing side project artifacts
+douyin-gold-video/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
